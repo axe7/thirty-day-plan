@@ -1,44 +1,55 @@
-"""Thirty-day plan entry for the make.fun plan bounty.
+"""Entry program for the make.fun thirty-day plan bounty.
 
-This program produces a single short plan that an AI agent can execute
-on its own to turn $100 into as much money as possible within 30 days.
+The idea in brief: give an autonomous agent a small starting stake
+and a single, concrete business it can actually run for thirty days.
+Here that business is a lightweight AI chat agent offered to dental
+clinics -- a buyer with a clear need, a reachable address list, and a
+price that pays the stake back after only a couple of sales.
 
-Entry rules: the output must be one text of at most 280 Unicode code
-points, written to a file named entry.txt in the output directory
-given by the MAKEFUN_OUTPUT_DIR environment variable (falling back
-to /output when that variable is not set).
+Bounty rules this program honours:
+  * The deliverable is one short piece of text, the plan itself.
+  * That text may be at most 280 characters long and cannot be blank.
+  * It must land in a file called entry.txt inside the directory
+    named by the MAKEFUN_OUTPUT_DIR environment variable, with
+    /output as the fallback when the variable is missing or empty.
 
-The plan itself focuses on a concrete, sellable service: building a
-demo AI chat agent for dental clinics and pitching it directly to
-practices found on Google Maps, with a clear price ($250 setup plus
-$49/month), a clear buyer (independent dental practices), and a
-day-one action (buy the domain, ship the demo, start outreach).
+Running the module performs those checks and writes the file; there
+is no input, no network use, and nothing beyond the standard library.
 """
 
 import os
 
-TEXT = (
-    "Day 1: $40 buys a domain and site. I build a demo AI chat agent for dental "
-    "clinics, then email 300 practices from Google Maps a live demo link: $250 "
-    "setup + $49/month. First 2 sales repay the stake; reinvest fees into "
-    "outreach. 10 clinics by day 30 = $2,500 + retainers."
-)
+# The plan, kept as one literal so its length is easy to audit.
+TEXT = "Day 1: $40 buys a domain and site. I build a demo AI chat agent for dental clinics, then email 300 practices from Google Maps a live demo link: $250 setup + $49/month. First 2 sales repay the stake; reinvest fees into outreach. 10 clinics by day 30 = $2,500 + retainers."
+
+MAX_LENGTH = 280
+
+
+def validate(text: str) -> None:
+    """Reject a plan that is blank or outside the allowed length."""
+    if not text.strip():
+        raise ValueError("plan text must not be blank")
+    if not 1 <= len(text) <= MAX_LENGTH:
+        raise ValueError(
+            "plan text length %d is outside 1..%d" % (len(text), MAX_LENGTH)
+        )
+
+
+def write_entry(text: str) -> str:
+    """Write *text* to entry.txt in the output directory; return the path."""
+    directory = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
+    os.makedirs(directory, exist_ok=True)
+    path = os.path.join(directory, "entry.txt")
+    with open(path, "w", encoding="utf-8") as out:
+        out.write(text)
+    return path
 
 
 def main() -> None:
-    if not TEXT.strip():
-        raise ValueError("plan text must not be blank")
-    if not 1 <= len(TEXT) <= 280:
-        raise ValueError(
-            f"plan text must be between 1 and 280 characters, got {len(TEXT)}"
-        )
-
-    output_dir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
-    os.makedirs(output_dir, exist_ok=True)
-
-    output_path = os.path.join(output_dir, "entry.txt")
-    with open(output_path, "w", encoding="utf-8") as handle:
-        handle.write(TEXT)
+    validate(TEXT)
+    path = write_entry(TEXT)
+    # A one-line confirmation makes manual runs and log checks easier.
+    print("wrote %d characters to %s" % (len(TEXT), path))
 
 
 if __name__ == "__main__":
